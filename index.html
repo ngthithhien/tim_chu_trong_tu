@@ -216,7 +216,8 @@
     let offsetX = 0, offsetY = 0;
 
     // Bắt đầu kéo
-    letter.addEventListener("pointerdown", e => {
+    letter.addEventListener("touchstart", e => {
+      e.preventDefault(); // Ngăn không cho sự kiện bị chồng chéo
       ghost = letter.cloneNode(true);
       ghost.style.position = "fixed";
       ghost.style.left = letter.getBoundingClientRect().left + "px";
@@ -225,18 +226,18 @@
       ghost.style.opacity = 0.9;
       document.body.appendChild(ghost);
 
-      offsetX = e.clientX - ghost.getBoundingClientRect().left;
-      offsetY = e.clientY - ghost.getBoundingClientRect().top;
-
-      ghost.setPointerCapture(e.pointerId);
+      const touch = e.touches[0];
+      offsetX = touch.clientX - ghost.getBoundingClientRect().left;
+      offsetY = touch.clientY - ghost.getBoundingClientRect().top;
     });
 
     // Di chuyển khi kéo
-    document.addEventListener("pointermove", e => {
+    document.addEventListener("touchmove", e => {
       if (!ghost) return;
 
-      ghost.style.left = e.clientX - offsetX + "px";
-      ghost.style.top = e.clientY - offsetY + "px";
+      const touch = e.touches[0];
+      ghost.style.left = touch.clientX - offsetX + "px";
+      ghost.style.top = touch.clientY - offsetY + "px";
 
       document.querySelectorAll(".target:not(.done)").forEach(t => {
         const p = overlap(ghost, t);
@@ -249,7 +250,7 @@
     });
 
     // Khi thả chữ
-    document.addEventListener("pointerup", e => {
+    document.addEventListener("touchend", e => {
       if (!ghost) return;
 
       let bestTarget = null;
@@ -280,7 +281,6 @@
     });
   });
 
-  // Hiệu ứng pháo hoa
   function firework(el) {
     const r = el.getBoundingClientRect();
     const f = document.createElement("div");
