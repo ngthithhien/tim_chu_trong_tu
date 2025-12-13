@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Tìm chữ b – d – đ</title>
+
+<style>
+@font-face {
+  font-family: "UTM Avo";
+  src: url("fonts/utm-avo.ttf");
+}
+
+* {
+  box-sizing: border-box;
+  font-family: "UTM Avo", sans-serif;
+  user-select: none;
+}
+
+body {
+  margin: 0;
+  background: #f5faff;
+  text-align: center;
+  overflow-x: hidden;
+}
+
+.top-buttons {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 10px;
+  z-index: 10;
+}
+
+button {
+  padding: 8px 14px;
+  font-size: 18px;
+  border-radius: 10px;
+  border: none;
+  background: #4db6ac;
+  color: #fff;
+}
+
+.game {
+  margin-top: 90px;
+}
+
+.card {
+  margin: 10px auto;
+  width: 95%;
+  max-width: 520px;
+}
+
+.card img {
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+}
+
+.word {
+  font-size: 110px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.word span.target {
+  display: inline-block;
+}
+
+.word span.done {
+  color: #00bcd4;
+  font-weight: bold;
+}
+
+.letters {
+  margin: 40px 0;
+  display: flex;
+  justify-content: center;
+  gap: 60px;
+}
+
+.letter {
+  font-size: 130px;
+  color: #00bcd4;
+  font-weight: bold;
+  cursor: grab;
+}
+
+@keyframes shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  50% { transform: translateX(4px); }
+  75% { transform: translateX(-4px); }
+  100% { transform: translateX(0); }
+}
+
+.target.hint {
+  animation: shake 0.25s infinite;
+}
+
+.firework {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  background: gold;
+  border-radius: 50%;
+  animation: boom 0.6s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes boom {
+  to {
+    transform: scale(6);
+    opacity: 0;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="top-buttons">
+  <button onclick="nextCard()">Tiếp theo</button>
+  <button onclick="fullscreen()">⤢</button>
+</div>
+
+<div class="game">
+  <div class="card">
+    <img id="img">
+    <div class="word" id="word"></div>
+  </div>
+
+  <div class="letters">
+    <div class="letter" data-letter="b">b</div>
+    <div class="letter" data-letter="d">d</div>
+    <div class="letter" data-letter="đ">đ</div>
+  </div>
+</div>
+
+<script>
+const data = [
+  {img:"em-be.png", text:"em bé", target:"b"},
+  {img:"ba-ba.png", text:"con ba ba", target:"b"},
+  {img:"ban-gai.png", text:"bạn gái", target:"b"},
+  {img:"ca-duoi.png", text:"cá đuối", target:"đ"},
+  {img:"cay-du.png", text:"cây dù", target:"d"},
+  {img:"con-de.png", text:"con dê", target:"d"},
+  {img:"cuc-da.png", text:"cục đá", target:"đ"},
+  {img:"du-du.png", text:"đu đủ", target:"đ"},
+  {img:"qua-dua.png", text:"quả dưa", target:"d"},
+];
+
+// ==== XÁO TRỘN DATA NGẪU NHIÊN ====
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+shuffleArray(data); // gọi khi load game
+
+let index = 0;
+const img = document.getElementById("img");
+const wordBox = document.getElementById("word");
+
+function loadCard() {
+  const item = data[index];
+  img.src = "images/" + item.img;
+  wordBox.innerHTML = "";
+
+  for (let ch of item.text) {
+    if (ch === item.target) {
+      const span = document.createElement("span");
+      span.textContent = ch;
+      span.className = "target";
+      span.dataset.answer = ch;
+      wordBox.appendChild(span);
+    } else {
+      wordBox.append(ch);
+    }
+  }
+}
+loadCard();
+
+function overlap(a, b) {
+  const r1 = a.getBoundingClientRect();
+  const r2 = b.getBoundingClientRect();
+  const x = Math.max(0, Math.min(r1.right, r2.right) - Math.max(r1.left, r2.left));
+  const y = Math.max(0, Math.min(r1.bottom, r2.bottom) - Math.max(r1.top, r2.top));
+  return (x * y) / (r2.width * r2.height);
+}
+
+/* ===== KÉO THẢ + WRONG ===== */
+document.querySelectorAll(".letter").forEach(letter => {
+  let ghost = null;
+  let offsetX = 0, offsetY = 0;
+
+  letter.addEventListener("pointerdown", e => {
+    ghost = letter.cloneNode(true);
+    ghost.style.position = "fixed";
+    ghost.style.left = letter.getBoundingClientRect().left + "px";
+    ghost.style.top = letter.getBoundingClientRect().top + "px";
+    ghost.style.zIndex = 1000;
+    ghost.style.opacity = 0.9;
+    document.body.appendChild(ghost);
+
+    offsetX = e.clientX - ghost.getBoundingClientRect().left;
+    offsetY = e.clientY - ghost.getBoundingClientRect().top;
+
+    ghost.setPointerCapture(e.pointerId);
+  });
+
+  document.addEventListener("pointermove", e => {
+    if (!ghost) return;
+
+    ghost.style.left = e.clientX - offsetX + "px";
+    ghost.style.top = e.clientY - offsetY + "px";
+
+    document.querySelectorAll(".target:not(.done)").forEach(t => {
+      const p = overlap(ghost, t);
+      if (p >= 0.3 && p < 0.5 && t.dataset.answer === letter.dataset.letter) {
+        t.classList.add("hint");
+      } else {
+        t.classList.remove("hint");
+      }
+    });
+  });
+
+  document.addEventListener("pointerup", e => {
+    if (!ghost) return;
+
+    let bestTarget = null;
+    let bestOverlap = 0;
+
+    document.querySelectorAll(".target:not(.done)").forEach(t => {
+      const p = overlap(ghost, t);
+      if (p > bestOverlap && t.dataset.answer === letter.dataset.letter) {
+        bestOverlap = p;
+        bestTarget = t;
+      }
+      t.classList.remove("hint");
+    });
+
+    if (bestTarget && bestOverlap >= 0.5) {
+      bestTarget.classList.add("done");
+      firework(bestTarget);
+      new Audio("sounds/correct.mp3").play();
+    } else {
+      ghost.style.color = "red";
+      ghost.style.transition = "0.5s";
+      setTimeout(() => { ghost.style.color = "#00bcd4"; }, 500);
+      new Audio("sounds/wrong.mp3").play();
+    }
+
+    ghost.remove();
+    ghost = null;
+  });
+});
+
+function firework(el) {
+  const r = el.getBoundingClientRect();
+  const f = document.createElement("div");
+  f.className = "firework";
+  f.style.left = r.left + r.width / 2 + "px";
+  f.style.top = r.top + r.height / 2 + "px";
+  document.body.appendChild(f);
+  setTimeout(() => f.remove(), 600);
+}
+
+function nextCard() {
+  index = (index + 1) % data.length;
+  loadCard();
+}
+
+function fullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+}
+</script>
+
+</body>
+</html>
